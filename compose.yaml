@@ -1,0 +1,40 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "mongodb://localhost:27017/admin", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  registration-service:
+    build: ./registration-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./registration-service/.env
+    environment:
+      MONGO_URI: mongodb://mongo:27017/registration
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  login-service:
+    build: ./login-service
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./login-service/.env
+    environment:
+      MONGO_URI: mongodb://mongo:27017/registration
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:
